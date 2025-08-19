@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Foxy Anime Recommender 🦊</title>
+<style>
+  body { font-family: 'Comic Sans MS', cursive, sans-serif; padding: 20px; background: #fff8f0; color: #4a2c2a; }
+  h1 { color: #ff914d; text-align: center; }
+  textarea { width: 100%; height: 80px; padding: 10px; font-size: 1rem; border-radius: 10px; border: 2px solid #ff914d; }
+  button { padding: 10px 20px; font-size: 1rem; cursor: pointer; background: #ffb266; border: none; border-radius: 12px; color: white; font-weight: bold; transition: 0.2s; }
+  button:hover { background: #ff914d; transform: scale(1.05); }
+  #loading-indicator { display: none; margin-top: 10px; font-weight: bold; text-align: center; }
+  #recommendations-output { margin-top: 20px; }
+  #recommendations-output p { margin: 8px 0; padding: 8px; border-radius: 10px; background: #fff0f5; box-shadow: 2px 2px 6px rgba(0,0,0,0.1); }
+</style>
+</head>
+<body>
+<h1>Foxy Anime Recommender 🦊</h1>
+<textarea id="anime-preferences" placeholder="Enter what you like in anime... 🦊✨"></textarea>
+<button id="get-recommendations-btn">Get Recommendations 🐾</button>
+<div id="loading-indicator">Looking for your perfect anime... 🦊</div>
+<div id="recommendations-output"></div>
+
+<script>
+document.body.addEventListener('dblclick', e => e.preventDefault());
+
+const preferencesTextarea = document.getElementById('anime-preferences');
+const getRecommendationsBtn = document.getElementById('get-recommendations-btn');
+const recommendationsOutput = document.getElementById('recommendations-output');
+const loadingIndicator = document.getElementById('loading-indicator');
+
+const animeDatabase = [
+  // --- Action / Shonen ---
+  { keywords: ['action','shonen','titan','alchemist','fight','battle','power'], title: 'Jujutsu Kaisen', description: 'A dark fantasy with curses and epic battles. 💥' },
+  { keywords: ['ninja','action','friendship','training'], title: 'Naruto', description: 'The journey of a boy striving to become the strongest ninja while protecting his friends. 🌀' },
+  { keywords: ['pirate','adventure','treasure','crew'], title: 'One Piece', description: 'A grand pirate adventure about dreams, freedom, and loyalty. ☠️' },
+  { keywords: ['action','mecha','politics','rebellion'], title: 'Code Geass', description: 'A mix of giant mecha battles, strategy, and rebellion against an empire. 🤖' },
+
+  // --- Fantasy / Isekai ---
+  { keywords: ['fantasy','magic','isekai','world','reincarnation'], title: 'Mushoku Tensei', description: 'A pioneering isekai with deep world-building and character growth. 🧙‍♂️' },
+  { keywords: ['fantasy','magic','adventure','school'], title: 'The Irregular at Magic High School', description: 'High-tech magic, siblings, and epic adventures. ✨' },
+  { keywords: ['isekai','game','virtual','trapped'], title: 'Sword Art Online', description: 'Players trapped in a deadly VR MMORPG must fight to survive. 🎮' },
+  { keywords: ['fantasy','demons','dark','epic'], title: 'Akame ga Kill!', description: 'Assassins fight against corruption in a dark world. ⚔️' },
+
+  // --- Slice of Life / Cute / Romance ---
+  { keywords: ['slice','life','cute','wholesome','school'], title: 'K-On!', description: 'Wholesome fun about a high school music club. 🎸' },
+  { keywords: ['slice','life','food','cooking'], title: 'Shokugeki no Soma', description: 'Cooking battles, comedy, and growth. 🍳' },
+  { keywords: ['slice','life','romance','cute'], title: 'Fruits Basket', description: 'Heartwarming story with magical family secrets. 🍓🐾' },
+  { keywords: ['romance','drama','school','cute'], title: 'My Dress-Up Darling', description: 'Cute cosplay romance with lots of fun. 🎀' },
+  { keywords: ['slice','life','family','spy'], title: 'Spy x Family', description: 'A pretend family full of secrets, love, and laughs. 🕵️‍♂️❤️' },
+
+  // --- Sci-Fi / Mystery ---
+  { keywords: ['sci-fi','time','thriller','mystery','psychological'], title: 'Steins;Gate', description: 'Mind-bending time travel suspense. 🤯' },
+  { keywords: ['sci-fi','space','bounty','adventure'], title: 'Cowboy Bebop', description: 'Stylish space western with bounty hunters. 🎷🚀' },
+  { keywords: ['mecha','sci-fi','psychological','apocalypse'], title: 'Neon Genesis Evangelion', description: 'Deconstruction of mecha anime with deep themes. 🌀' },
+
+  // --- Sports ---
+  { keywords: ['sports','teamwork','volleyball','school'], title: 'Haikyuu!!', description: 'High energy volleyball anime. 🏐' },
+  { keywords: ['sports','basketball','slam'], title: "Kuroko's Basketball", description: 'Fast-paced basketball action. 🏀' },
+  { keywords: ['sports','boxing','classic'], title: 'Hajime no Ippo', description: 'Boxing anime about perseverance and grit. 🥊' },
+
+  // --- Horror / Supernatural ---
+  { keywords: ['horror','ghoul','dark','supernatural','mystery'], title: 'Tokyo Ghoul', description: 'Dark story about humans and ghouls. 👁️' },
+  { keywords: ['horror','zombie','apocalypse','survival'], title: 'Highschool of the Dead', description: 'Zombie apocalypse survival. 🧟' },
+  { keywords: ['horror','supernatural','school','curse'], title: 'Another', description: 'Suspenseful horror mystery in a cursed classroom. ⚰️' },
+
+  // --- Historical / Samurai ---
+  { keywords: ['samurai','sword','historical','japan'], title: 'Rurouni Kenshin', description: 'Wandering samurai seeks redemption. ⚔️' },
+  { keywords: ['samurai','revenge','bloody','feudal'], title: 'Basilisk', description: 'Two ninja clans in a bloody feud. 🩸' },
+  { keywords: ['historical','action','china','warring'], title: 'Kingdom', description: 'Epic war story in ancient China. 🏹' },
+
+  // --- Mafia / Crime ---
+  { keywords: ['mafia','gang','crime','yakuza','underworld'], title: '91 Days', description: 'Revenge in the Prohibition-era mafia. 🥀💣' },
+  { keywords: ['mafia','gang','crime','yakuza','underworld'], title: 'Baccano!', description: 'Multiple mafia storylines collide in chaotic fun. 🔫🍸' },
+  { keywords: ['mafia','gang','crime','yakuza','underworld'], title: 'Gangsta.', description: 'Crime-filled city with mercenaries and mafia tension. 💥' },
+  { keywords: ['mafia','gang','crime','yakuza','underworld'], title: 'Black Lagoon', description: 'Gunfights, mafia, and pirate mercenaries. 💣🚤' }
+];
+
+getRecommendationsBtn.addEventListener('click', () => {
+  const preferences = preferencesTextarea.value.toLowerCase();
+  recommendationsOutput.innerHTML = '';
+  loadingIndicator.style.display = 'block';
+
+  setTimeout(() => {
+    let matches = animeDatabase.filter(anime =>
+      anime.keywords.some(k => preferences.includes(k))
+    );
+
+    // Special case: if user types "mafia" or "mafia and detective"
+    if(preferences.includes('mafia')) {
+      matches.push({ 
+        title: 'Bungou Stray Dogs', 
+        description: 'Detectives with supernatural powers battle mafia and criminals. 🕵️‍♂️💥' 
+      });
+    }
+
+    if(matches.length === 0) {
+      recommendationsOutput.innerHTML = "No recommendations found 😢 Try typing things like 'cute', 'magic', 'action', or 'mafia'! 🦊";
+    } else {
+      matches.forEach(anime => {
+        recommendationsOutput.innerHTML += `<p><b>${anime.title}</b>: ${anime.description}</p>`;
+      });
+    }
+
+    loadingIndicator.style.display = 'none';
+  }, 500);
+});
+</script>
+</body>
+</html>
